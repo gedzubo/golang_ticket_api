@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"time"
 
 	"gorm.io/driver/postgres"
@@ -9,9 +8,36 @@ import (
 )
 
 type User struct {
+	ID        string `gorm:"primary_key;type:uuid;default:uuid_generate_v4()"`
 	Username  string
 	CreatedAt time.Time
 	UpdatedAt time.Time
+}
+
+type Purchase struct {
+	ID             string `gorm:"primary_key;type:uuid;default:uuid_generate_v4()"`
+	Quantity       uint16
+	UserId         string
+	TicketOptionId string
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+}
+
+type TicketOption struct {
+	ID         string `gorm:"primary_key;type:uuid;default:uuid_generate_v4()"`
+	Name       string
+	Desc       string
+	Allocation uint16
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+}
+
+type Ticket struct {
+	ID             string `gorm:"primary_key;type:uuid;default:uuid_generate_v4()"`
+	TicketOptionId string
+	PurchaseId     string
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
 }
 
 func main() {
@@ -20,9 +46,4 @@ func main() {
 	if err != nil {
 		panic("failed to connect to database")
 	}
-
-	var user User
-	db.First(&user)
-	fmt.Print(user)
-
 }
