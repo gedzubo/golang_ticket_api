@@ -1,49 +1,29 @@
 package main
 
 import (
-	"time"
+	"golang_ticket_api/models"
 
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
+	"github.com/gin-gonic/gin"
 )
 
-type User struct {
-	ID        string `gorm:"primary_key;type:uuid;default:uuid_generate_v4()"`
-	Username  string
-	CreatedAt time.Time
-	UpdatedAt time.Time
-}
+func getTicketOption(ctx *gin.Context) {
+	var ticketOption models.TicketOption
 
-type Purchase struct {
-	ID             string `gorm:"primary_key;type:uuid;default:uuid_generate_v4()"`
-	Quantity       uint16
-	UserId         string
-	TicketOptionId string
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
-}
+	result := models.DB.First(&ticketOption, ctx.Param("id"))
+	if result.Error != nil {
+		ctx.JSON(500, gin.H{"error": result.Error})
+		return
+	}
 
-type TicketOption struct {
-	ID         string `gorm:"primary_key;type:uuid;default:uuid_generate_v4()"`
-	Name       string
-	Desc       string
-	Allocation uint16
-	CreatedAt  time.Time
-	UpdatedAt  time.Time
-}
-
-type Ticket struct {
-	ID             string `gorm:"primary_key;type:uuid;default:uuid_generate_v4()"`
-	TicketOptionId string
-	PurchaseId     string
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
+	ctx.JSON(200, ticketOption)
 }
 
 func main() {
-	connection_string := "user=postgres password= host=127.0.0.1 port=5432 dbname=ticket_api_development sslmode=disable"
-	db, err := gorm.Open(postgres.Open(connection_string), &gorm.Config{})
-	if err != nil {
-		panic("failed to connect to database")
-	}
+	models.ConnectToDatabase()
+
+	r := gin.Default()
+
+	r.GET("/ticket_options/:id", getTicketOption)
+
+	r.Run("localhost:3000")
 }
