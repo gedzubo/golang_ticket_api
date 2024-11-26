@@ -1,21 +1,30 @@
 package main
 
 import (
+	"errors"
 	"golang_ticket_api/models"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 func getTicketOption(ctx *gin.Context) {
 	var ticketOption models.TicketOption
 
-	result := models.DB.First(&ticketOption, ctx.Param("id"))
-	if result.Error != nil {
-		ctx.JSON(500, gin.H{"error": result.Error})
-		return
+	result := models.DB.First(&ticketOption, "id = ?", ctx.Param("id"))
+	err := result.Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": "record not found"})
+			return
+		} else {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": result.Error})
+			return
+		}
 	}
 
-	ctx.JSON(200, ticketOption)
+	ctx.JSON(http.StatusOK, ticketOption)
 }
 
 func main() {
