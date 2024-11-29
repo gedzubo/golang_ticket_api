@@ -14,16 +14,7 @@ import (
 func getTicketOption(ctx *gin.Context) {
 	var ticketOption models.TicketOption
 
-	err := models.DB.First(&ticketOption, "id = ?", ctx.Param("id")).Error
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			ctx.JSON(http.StatusNotFound, gin.H{"error": "record not found"})
-			return
-		} else {
-			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err})
-			return
-		}
-	}
+	findRecordOrRaiseError(&ticketOption, "id", ctx)
 
 	ctx.JSON(http.StatusOK, ticketOption)
 }
@@ -42,30 +33,13 @@ func createTicketOption(ctx *gin.Context) {
 func purchaseTickets(ctx *gin.Context) {
 	var ticketOption models.TicketOption
 	var user models.User
+	var quantity uint64
+	var err error
 
-	ticketOptionErr := models.DB.First(&ticketOption, "id = ?", ctx.Param("id")).Error
-	if ticketOptionErr != nil {
-		if errors.Is(ticketOptionErr, gorm.ErrRecordNotFound) {
-			ctx.JSON(http.StatusNotFound, gin.H{"error": "record not found"})
-			return
-		} else {
-			ctx.JSON(http.StatusInternalServerError, gin.H{"error": ticketOptionErr})
-			return
-		}
-	}
+	findRecordOrRaiseError(&ticketOption, "id", ctx)
+	findRecordOrRaiseError(&user, "user_id", ctx)
 
-	userErr := models.DB.First(&user, "id = ?", ctx.Param("user_id")).Error
-	if userErr != nil {
-		if errors.Is(userErr, gorm.ErrRecordNotFound) {
-			ctx.JSON(http.StatusNotFound, gin.H{"error": "record not found"})
-			return
-		} else {
-			ctx.JSON(http.StatusInternalServerError, gin.H{"error": userErr})
-			return
-		}
-	}
-
-	quantity, err := strconv.ParseUint(ctx.Param("quantity"), 10, 16)
+	quantity, err = strconv.ParseUint(ctx.Param("quantity"), 10, 32)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Please provide correct quantity"})
 	}
@@ -92,6 +66,19 @@ func purchaseTickets(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, nil)
+}
+
+func findRecordOrRaiseError[T any](record *T, param_identifier string, ctx *gin.Context) {
+	err := models.DB.First(&record, "id = ?", ctx.Param(param_identifier)).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": "record not found"})
+			return
+		} else {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err})
+			return
+		}
+	}
 }
 
 func main() {
