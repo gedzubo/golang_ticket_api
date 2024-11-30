@@ -4,7 +4,7 @@ import "time"
 
 type Purchase struct {
 	ID             string `gorm:"primary_key;type:uuid;default:uuid_generate_v4()"`
-	Quantity       uint16
+	Quantity       uint64
 	UserId         string
 	TicketOptionId string
 	CreatedAt      time.Time

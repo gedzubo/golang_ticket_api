@@ -1,7 +1,7 @@
 package main
 
 import (
-	"errors"
+	"fmt"
 	"golang_ticket_api/models"
 	"net/http"
 	"strconv"
@@ -14,18 +14,29 @@ import (
 func getTicketOption(ctx *gin.Context) {
 	var ticketOption models.TicketOption
 
-	findRecordOrRaiseError(&ticketOption, "id", ctx)
+	err := models.DB.First(&ticketOption, "id = ?", ctx.Param("id")).Error
+	if err != nil {
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "ticket option with provided ID does not exist"})
+		return
+	}
 
 	ctx.JSON(http.StatusOK, ticketOption)
 }
 
 func createTicketOption(ctx *gin.Context) {
-	var ticketOption models.TicketOption
+	var ticketOptionInput models.TicketOptionInput
 
-	if err := ctx.ShouldBindJSON(&ticketOption); err != nil {
+	if err := ctx.ShouldBindJSON(&ticketOptionInput); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+
+	ticketOption := models.TicketOption{
+		Name:       ticketOptionInput.Name,
+		Desc:       ticketOptionInput.Desc,
+		Allocation: ticketOptionInput.Allocation,
+	}
+	models.DB.Create(&ticketOption)
 
 	ctx.JSON(http.StatusOK, ticketOption)
 }
@@ -36,25 +47,43 @@ func purchaseTickets(ctx *gin.Context) {
 	var quantity uint64
 	var err error
 
-	findRecordOrRaiseError(&ticketOption, "id", ctx)
-	findRecordOrRaiseError(&user, "user_id", ctx)
-
-	quantity, err = strconv.ParseUint(ctx.Param("quantity"), 10, 32)
+	err = models.DB.First(&ticketOption, "id = ?", ctx.Param("id")).Error
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Please provide correct quantity"})
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "ticket option with provided ID does not exist"})
+		return
+	}
+
+	err = models.DB.First(&user, "id = ?", ctx.Param("user_id")).Error
+	if err != nil {
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "user with provided ID does not exist"})
+		return
+	}
+
+	quantity, err = strconv.ParseUint(ctx.Param("quantity"), 10, 64)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Please provide valid quantity"})
 	}
 
 	err = models.DB.Transaction(func(tx *gorm.DB) error {
 		models.DB.Clauses(clause.Locking{Strength: "UPDATE"}).Find(&ticketOption)
 
-		// check if we have enough available slots
-		// update ticket option quantity
-		// create a new purchase
-		// create tickets based on quantity
+		currentQuantity := ticketOption.Allocation
 
-		if err := tx.Create(&models.Purchase{Quantity: uint16(quantity)}).Error; err != nil {
-			// return any error will rollback
+		if currentQuantity < quantity {
+			return fmt.Errorf("We don't have enough tickets to complete your purchase")
+		}
+
+		tx.Model(&ticketOption).Update("Allocation", currentQuantity-quantity)
+
+		purchase := models.Purchase{Quantity: quantity, UserId: user.ID, TicketOptionId: ticketOption.ID}
+		if err := tx.Create(&purchase).Error; err != nil {
 			return err
+		}
+
+		for i := 1; i <= int(quantity); i++ {
+			if err := tx.Create(&models.Ticket{PurchaseId: purchase.ID, TicketOptionId: ticketOption.ID}).Error; err != nil {
+				return err
+			}
 		}
 
 		// return nil will commit the whole transaction
@@ -66,19 +95,6 @@ func purchaseTickets(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, nil)
-}
-
-func findRecordOrRaiseError[T any](record *T, param_identifier string, ctx *gin.Context) {
-	err := models.DB.First(&record, "id = ?", ctx.Param(param_identifier)).Error
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			ctx.JSON(http.StatusNotFound, gin.H{"error": "record not found"})
-			return
-		} else {
-			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err})
-			return
-		}
-	}
 }
 
 func main() {
