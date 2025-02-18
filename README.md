@@ -1,1 +1,8 @@
-# golang_ticket_api
+# Golang ticket api
+
+## Status
+
+In progress
+
+## Stack
+
