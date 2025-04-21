@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"golang_ticket_api/handlers"
 	"golang_ticket_api/models"
 	"net/http"
 	"strconv"
@@ -10,18 +11,6 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
-
-func getTicketOption(ctx *gin.Context) {
-	var ticketOption models.TicketOption
-
-	err := models.DB.First(&ticketOption, "id = ?", ctx.Param("id")).Error
-	if err != nil {
-		ctx.JSON(http.StatusNotFound, gin.H{"error": "ticket option with provided ID does not exist"})
-		return
-	}
-
-	ctx.JSON(http.StatusOK, ticketOption)
-}
 
 func createTicketOption(ctx *gin.Context) {
 	var ticketOptionInput models.TicketOptionInput
@@ -102,7 +91,7 @@ func main() {
 
 	r := gin.Default()
 
-	r.GET("/ticket_options/:id", getTicketOption)
+	r.GET("/ticket_options/:id", handlers.GetTicketOption)
 	r.POST("/ticket_options", createTicketOption)
 	r.POST("/ticket_options/:id/purchases", purchaseTickets)
 
