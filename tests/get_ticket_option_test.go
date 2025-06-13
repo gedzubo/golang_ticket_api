@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestShowTicketSuccess(t *testing.T) {
+func TestGetTicketOption_Success(t *testing.T) {
 	r := gin.Default()
 	r.GET("/ticket_options/:id", handlers.GetTicketOption)
 

@@ -19,14 +19,22 @@ func setupTestDB() *gorm.DB {
 		panic("failed to reset schema")
 	}
 
-	err = db.AutoMigrate(
-		&models.Purchase{},
-		&models.TicketOption{},
-		&models.Ticket{},
-		&models.User{},
-	)
-	if err != nil {
-		panic("failed to migrate test schema")
+	// Enable UUID extension
+	if err := db.Exec("CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";").Error; err != nil {
+		panic("failed to create UUID extension: " + err.Error())
+	}
+
+	if err := db.AutoMigrate(&models.User{}); err != nil {
+		panic("failed to migrate User model: " + err.Error())
+	}
+	if err := db.AutoMigrate(&models.TicketOption{}); err != nil {
+		panic("failed to migrate TicketOption model: " + err.Error())
+	}
+	if err := db.AutoMigrate(&models.Ticket{}); err != nil {
+		panic("failed to migrate Ticket model: " + err.Error())
+	}
+	if err := db.AutoMigrate(&models.Purchase{}); err != nil {
+		panic("failed to migrate Purchase model: " + err.Error())
 	}
 
 	models.DB = db
