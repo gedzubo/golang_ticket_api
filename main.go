@@ -12,23 +12,6 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-func createTicketOption(ctx *gin.Context) {
-	var ticketOptionInput models.TicketOptionInput
-
-	if err := ctx.ShouldBindJSON(&ticketOptionInput); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	ticketOption := models.TicketOption{
-		Name:       ticketOptionInput.Name,
-		Desc:       ticketOptionInput.Desc,
-		Allocation: ticketOptionInput.Allocation,
-	}
-	models.DB.Create(&ticketOption)
-
-	ctx.JSON(http.StatusOK, ticketOption)
-}
 
 func purchaseTickets(ctx *gin.Context) {
 	var ticketOption models.TicketOption
@@ -92,7 +75,7 @@ func main() {
 	r := gin.Default()
 
 	r.GET("/ticket_options/:id", handlers.GetTicketOption)
-	r.POST("/ticket_options", createTicketOption)
+	r.POST("/ticket_options", handlers.CreateTicketOption)
 	r.POST("/ticket_options/:id/purchases", purchaseTickets)
 
 	r.Run("localhost:3000")
